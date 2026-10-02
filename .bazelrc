@@ -1,0 +1,34 @@
+# Common build options
+build --cxxopt="-std=c++17"
+build --jobs=8
+build --verbose_failures
+build --keep_going
+
+common --registry=https://bcr.wheelos.cn/
+common --registry=https://bcr.bazel.build
+
+# Vendor/offline build mode. Enabled via: bazel build --config=vendor ...
+common:vendor --vendor_dir=vendor/bazel
+
+# Enable Bzlmod for every Bazel command
+common --enable_bzlmod
+common:ci --color=yes
+common:ci --curses=no
+common:ci --show_progress_rate_limit=5
+common:lockfile-check --lockfile_mode=error
+common:lockfile-update --lockfile_mode=update
+
+# Compilation modes
+
+build:release --compilation_mode=opt --strip=always --copt=-O3
+build:debug --compilation_mode=dbg --copt=-g --copt=-O0
+build:ci --config=release
+build:cuda_toolkit --@rules_cuda//cuda:enable=true
+build:cuda_toolkit --define=with_cuda=true
+build:cuda --config=cuda_toolkit
+build:cuda --define=use_cuda_ipc=true
+build:orin --config=cuda_toolkit
+build:orin --define=use_nvsci=true
+test:ci --test_output=errors
+
+try-import %workspace%/.bazelrc.user
