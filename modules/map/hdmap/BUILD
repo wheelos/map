@@ -21,7 +21,6 @@ cc_library(
         "@wheelos_common//modules/common/configs:config_gflags",
         "@wheelos_common//modules/common/math",
         "@wheelos_common//modules/common/util:util_tool",
-        "//modules/map/hdmap/adapter:opendrive_adapter",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/strings",
         "@core//cyber/common:file",

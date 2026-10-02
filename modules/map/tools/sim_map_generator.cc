@@ -14,7 +14,6 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include "absl/strings/match.h"
 #include "gflags/gflags.h"
 
 #include "wheelos_msgs/map_msgs/map.pb.h"
@@ -23,7 +22,6 @@
 #include "cyber/common/log.h"
 #include "modules/common/configs/config_gflags.h"
 #include "modules/common/util/points_downsampler.h"
-#include "modules/map/hdmap/adapter/opendrive_adapter.h"
 #include "modules/map/hdmap/hdmap_util.h"
 
 /**
@@ -48,8 +46,6 @@ using apollo::cyber::common::SetProtoToASCIIFile;
 using apollo::cyber::common::SetProtoToBinaryFile;
 using apollo::hdmap::Curve;
 using apollo::hdmap::Map;
-using apollo::hdmap::adapter::OpendriveAdapter;
-
 static void DownsampleCurve(Curve* curve) {
   auto* line_segment = curve->mutable_segment(0)->mutable_line_segment();
   std::vector<PointENU> points(line_segment->point().begin(),
@@ -111,11 +107,7 @@ int main(int32_t argc, char** argv) {
 
   Map map_pb;
   const auto map_file = apollo::hdmap::BaseMapFile();
-  if (absl::EndsWith(map_file, ".xml")) {
-    ACHECK(OpendriveAdapter::LoadData(map_file, &map_pb));
-  } else {
-    ACHECK(GetProtoFromFile(map_file, &map_pb)) << "Fail to open: " << map_file;
-  }
+  ACHECK(GetProtoFromFile(map_file, &map_pb)) << "Fail to open: " << map_file;
 
   DownsampleMap(&map_pb);
   OutputMap(map_pb);

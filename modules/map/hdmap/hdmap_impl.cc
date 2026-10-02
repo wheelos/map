@@ -21,10 +21,8 @@ limitations under the License.
 #include <set>
 #include <unordered_set>
 
-#include "absl/strings/match.h"
 #include "cyber/common/file.h"
-#include "modules/common/util/util.h"
-#include "modules/map/hdmap/adapter/opendrive_adapter.h"
+#include "modules/common/configs/config_gflags.h"
 
 namespace apollo {
 namespace hdmap {
@@ -51,11 +49,7 @@ int HDMapImpl::LoadMapFromFile(const std::string& map_filename) {
   Clear();
   // TODO(All) seems map_ can be changed to a local variable of this
   // function, but test will fail if I do so. if so.
-  if (absl::EndsWith(map_filename, ".xml")) {
-    if (!adapter::OpendriveAdapter::LoadData(map_filename, &map_)) {
-      return -1;
-    }
-  } else if (!cyber::common::GetProtoFromFile(map_filename, &map_)) {
+  if (!cyber::common::GetProtoFromFile(map_filename, &map_)) {
     return -1;
   }
 
@@ -1423,7 +1417,10 @@ int HDMapImpl::SearchObjects(const Vec2d& center, const double radius,
                              const KDTree& kdtree,
                              std::vector<std::string>* const results) {
   static std::mutex mutex_search_object;
-  UNIQUE_LOCK_MULTITHREAD(mutex_search_object);
+  std::unique_lock<std::mutex> lock(mutex_search_object, std::defer_lock);
+  if (FLAGS_multithread_run) {
+    lock.lock();
+  }
   if (results == nullptr) {
     return -1;
   }

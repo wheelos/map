@@ -36,8 +36,8 @@ namespace apollo {
 namespace hdmap {
 
 class HDMapImplTestSuite : public ::testing::Test {
- public:
-  HDMapImplTestSuite() {
+ protected:
+  void SetUp() override {
     std::string runfiles_error;
     std::unique_ptr<bazel::tools::cpp::runfiles::Runfiles> runfiles(
         bazel::tools::cpp::runfiles::Runfiles::CreateForTest(
@@ -48,7 +48,7 @@ class HDMapImplTestSuite : public ::testing::Test {
         "wheelos_map/modules/map/hdmap/test-data/base_map.bin",
         BAZEL_CURRENT_REPOSITORY);
     ASSERT_FALSE(map_filename.empty());
-    EXPECT_EQ(0, hdmap_impl_.LoadMapFromFile(map_filename));
+    ASSERT_EQ(0, hdmap_impl_.LoadMapFromFile(map_filename));
   }
 
  public:

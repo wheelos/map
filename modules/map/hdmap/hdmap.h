@@ -53,8 +53,8 @@ namespace hdmap {
 class HDMap {
  public:
   /**
-   * @brief load map from local file
-   * @param map_filename path of map data file
+   * @brief load a WheelOS Map protobuf from a local file
+   * @param map_filename path of a serialized map protobuf file (not XML)
    * @return 0:success, otherwise failed
    */
   int LoadMapFromFile(const std::string& map_filename);
