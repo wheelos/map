@@ -1,22 +1,120 @@
 # WheelOS Map
 
-WheelOS Map is a Bzlmod module for loading and querying serialized WheelOS Map
-protobuf data and for map-generation tools. XML/OpenDRIVE parsing is not
-supported.
+## Overview
 
-## Repository guidance
+WheelOS Map is a C++ Bzlmod module for loading serialized WheelOS Map
+protobuf data into an in-memory map and querying map elements. It also
+provides two Bazel-built map utilities: `sim_map_generator` and
+`bin_map_generator`.
 
-- [Agent guide](AGENTS.md): contribution rules and navigation.
-- [Copilot instructions](.github/copilot-instructions.md): build, test, and
-  architecture entrypoints.
-- [Knowledge](.agents/knowledge/): durable architecture and repository
-  conventions.
-- [Skills](.agents/skills/): task-specific build/test and review workflows.
-- [External-module development](.agents/skills/external-module-development/SKILL.md):
-  use a local checkout through the consumer's Bzlmod override.
-- [Architecture](.agents/knowledge/architecture.md): module ownership and
-  dependency boundaries.
-- [Conventions](.agents/knowledge/conventions.md): public targets, BUILD
-  patterns, and input-format contract.
-- [Troubleshooting](.agents/knowledge/troubleshooting.md): Bzlmod and
-  validation guidance.
+The module does not parse XML or OpenDRIVE input. Those formats must be
+converted to a supported protobuf representation outside this module.
+
+## Role in WheelOS
+
+WheelOS Map provides map data access and related map utilities to WheelOS
+consumers. It does not own Apollo Planning's `pnc_map` adaptation, routing
+topology generation, product map assets, or product installation.
+
+```text
+WheelOS
+ |
+ +--- Mapping
+      |
+      +--- WheelOS Map
+```
+
+## Architecture
+
+```text
+Serialized WheelOS Map protobuf
+              |
+              v
+    modules/map/hdmap
+     +--> HDMap --> HDMapImpl --> in-memory map and spatial queries
+     +--> HDMapUtil --> configured map paths and base/simulation map access
+
+Configured base-map input --> sim_map_generator --> sim_map.txt / sim_map.bin
+<map_dir>/base_map.txt --> bin_map_generator --> <output_dir>/base_map.bin
+```
+
+`modules/map/hdmap` owns the `HDMap` and `HDMapUtil` interfaces and map-query
+implementation. The two utilities are Bazel binary targets in
+`modules/map/tools`. The first downsamples the configured base map; the second
+reads `base_map.txt` as a protobuf text file and writes a binary protobuf map.
+
+## Installation
+
+This repository defines a Bazel/Bzlmod module; it does not define a separate
+installer. From the repository root, build the libraries and tools with the
+targets declared by this module:
+
+```bash
+bazel build \
+  //modules/map/hdmap:hdmap \
+  //modules/map/hdmap:hdmap_util \
+  //modules/map/tools:sim_map_generator \
+  //modules/map/tools:bin_map_generator
+```
+
+The module declares its direct dependencies in `MODULE.bazel`, including
+`wheelos_common`, `wheelos_core`, and `wheelos_msgs`.
+
+## Examples
+
+### Quick start
+
+Build HDMap and run the focused tests:
+
+```bash
+bazel build \
+  //modules/map/hdmap:hdmap \
+  //modules/map/hdmap:hdmap_util
+
+bazel test \
+  //modules/map/hdmap:hdmap_map_test \
+  //modules/map/hdmap:hdmap_util_test \
+  --test_output=errors
+```
+
+The tests are marked with the `exclude` tag, so invoke these targets explicitly
+rather than relying on wildcard test selection.
+
+### Repository example
+
+There is no standalone example application in the repository. The HDMap
+implementation test loads the checked-in fixture
+[`base_map.bin`](modules/map/hdmap/test-data/base_map.bin), looks up map
+elements by ID, and performs spatial queries. See
+[`hdmap_impl_test.cc`](modules/map/hdmap/hdmap_impl_test.cc) for the executable
+example and its fixture path.
+
+## Documentation
+
+### API reference
+
+- `HDMap::LoadMapFromFile` loads a serialized map protobuf file;
+  `HDMap::LoadMapFromProto` loads a `Map` protobuf message. Both return `0` on
+  success.
+- `HDMap` provides lookups by map-element ID, range-based queries for map
+  elements, nearest-lane queries, road-boundary/ROI queries, and local-map
+  extraction. See the header for exact parameter and result types.
+- `HDMapUtil` provides configured base/simulation map accessors
+  (`BaseMapPtr`, `BaseMap`, `SimMapPtr`, `SimMap`) and `ReloadMaps`.
+
+### Source documentation
+
+- [HDMap API](modules/map/hdmap/hdmap.h): map loading, ID lookups, spatial
+  queries, nearest-lane queries, and local map extraction.
+- [HDMapUtil API](modules/map/hdmap/hdmap_util.h): map path helpers and
+  flag-based base/simulation map access.
+- [HDMap implementation tests](modules/map/hdmap/hdmap_impl_test.cc): map
+  loading and query examples using the checked-in fixture.
+- [Architecture and ownership boundaries](.agents/knowledge/architecture.md).
+- [BUILD and API conventions](.agents/knowledge/conventions.md).
+- [Bzlmod and validation troubleshooting](.agents/knowledge/troubleshooting.md).
+- [Testing workflow](.agents/skills/testing/SKILL.md).
+- [Review workflow](.agents/skills/review/SKILL.md).
+- [Local consumer development](.agents/skills/external-module-development/SKILL.md).
+- [Copilot build and architecture instructions](.github/copilot-instructions.md).
+- [Agent guide](AGENTS.md).
