@@ -32,16 +32,25 @@ Serialized WheelOS Map protobuf
               v
     modules/map/hdmap
      +--> HDMap --> HDMapImpl --> in-memory map and spatial queries
-     +--> HDMapUtil --> configured map paths and base/simulation map access
+     +--> MapSelection --> persisted map ID and selected asset bundle
+              |
+              v
+        HDMapUtil --> selected base/simulation map files
 
 Configured base-map input --> sim_map_generator --> sim_map.txt / sim_map.bin
-<map_dir>/base_map.txt --> bin_map_generator --> <output_dir>/base_map.bin
+<input_map_directory>/base_map.txt --> bin_map_generator --> <output_dir>/base_map.bin
 ```
 
 `modules/map/hdmap` owns the `HDMap` and `HDMapUtil` interfaces and map-query
 implementation. The two utilities are Bazel binary targets in
 `modules/map/tools`. The first downsamples the configured base map; the second
-reads `base_map.txt` as a protobuf text file and writes a binary protobuf map.
+reads `base_map.txt` as a protobuf text file from the required
+`--input_map_directory` and writes a binary protobuf map.
+
+At runtime, `HDMapUtil` asks the shared `MapSelection` API for the selected map
+bundle. The map ID is persisted by that API in KVDB; the resource manager
+resolves the bundle directory. Map file helpers return an empty path when map
+selection fails or no candidate file exists.
 
 ## Installation
 
@@ -99,15 +108,17 @@ example and its fixture path.
 - `HDMap` provides lookups by map-element ID, range-based queries for map
   elements, nearest-lane queries, road-boundary/ROI queries, and local-map
   extraction. See the header for exact parameter and result types.
-- `HDMapUtil` provides configured base/simulation map accessors
-  (`BaseMapPtr`, `BaseMap`, `SimMapPtr`, `SimMap`) and `ReloadMaps`.
+- `HDMapUtil` provides selected base/simulation map accessors (`BaseMapPtr`,
+  `BaseMap`, `SimMapPtr`, `SimMap`), selected-bundle file helpers, and
+  `ReloadMaps`. Default and park-and-go routing files still use their legacy
+  adjacent-to-bundle paths pending their migration into the bundle.
 
 ### Source documentation
 
 - [HDMap API](modules/map/hdmap/hdmap.h): map loading, ID lookups, spatial
   queries, nearest-lane queries, and local map extraction.
-- [HDMapUtil API](modules/map/hdmap/hdmap_util.h): map path helpers and
-  flag-based base/simulation map access.
+- [HDMapUtil API](modules/map/hdmap/hdmap_util.h): selected-map file helpers
+  and base/simulation map access.
 - [HDMap implementation tests](modules/map/hdmap/hdmap_impl_test.cc): map
   loading and query examples using the checked-in fixture.
 - [Architecture and ownership boundaries](.agents/knowledge/architecture.md).

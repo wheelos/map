@@ -15,18 +15,47 @@ limitations under the License.
 
 #include "modules/map/hdmap/hdmap_util.h"
 
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+
 #include "gtest/gtest.h"
+#include "modules/common/map/map_selection.h"
 
 namespace apollo {
 namespace hdmap {
 
 class HDMapUtilTestSuite : public ::testing::Test {
  protected:
-  HDMapUtilTestSuite() {}
-  virtual ~HDMapUtilTestSuite() {}
-  virtual void SetUp() {}
-  virtual void TearDown() {}
+  void SetUp() override {
+    original_base_map_filename_ = FLAGS_base_map_filename;
+    original_test_base_map_filename_ = FLAGS_test_base_map_filename;
+    map_directory_ =
+        std::filesystem::temp_directory_path() /
+        ("hdmap_util_test_" +
+         std::to_string(std::chrono::steady_clock::now()
+                            .time_since_epoch()
+                            .count()));
+    std::filesystem::create_directories(map_directory_);
+    apollo::common::MapSelection::SetTestMapDirectory(
+        map_directory_.string());
+    FLAGS_base_map_filename = "missing.bin|base_map.bin";
+    FLAGS_test_base_map_filename.clear();
+  }
+
+  void TearDown() override {
+    apollo::common::MapSelection::ClearTestMapDirectory();
+    FLAGS_base_map_filename = original_base_map_filename_;
+    FLAGS_test_base_map_filename = original_test_base_map_filename_;
+    std::error_code error;
+    std::filesystem::remove_all(map_directory_, error);
+  }
+
   void InitMapProto(Map* map_proto);
+
+  std::filesystem::path map_directory_;
+  std::string original_base_map_filename_;
+  std::string original_test_base_map_filename_;
 };
 
 void HDMapUtilTestSuite::InitMapProto(Map* map_proto) {
@@ -50,6 +79,17 @@ void HDMapUtilTestSuite::InitMapProto(Map* map_proto) {
     right_sample->set_width(1.5);
   }
   lane->set_type(Lane::CITY_DRIVING);
+}
+
+TEST_F(HDMapUtilTestSuite, BaseMapFileReturnsExistingCandidate) {
+  const std::filesystem::path expected = map_directory_ / "base_map.bin";
+  std::ofstream(expected).put('\0');
+
+  EXPECT_EQ(expected.string(), BaseMapFile());
+}
+
+TEST_F(HDMapUtilTestSuite, BaseMapFileReturnsEmptyWhenCandidatesAreMissing) {
+  EXPECT_TRUE(BaseMapFile().empty());
 }
 
 }  // namespace hdmap

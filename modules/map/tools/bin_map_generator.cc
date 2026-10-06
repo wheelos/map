@@ -26,6 +26,7 @@ limitations under the License.
  */
 
 DEFINE_string(output_dir, "/tmp", "output map directory");
+DEFINE_string(input_map_directory, "", "Input directory containing base_map.txt.");
 
 int main(int argc, char *argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -33,7 +34,11 @@ int main(int argc, char *argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  const auto map_filename = FLAGS_map_dir + "/base_map.txt";
+  if (FLAGS_input_map_directory.empty()) {
+    AERROR << "Input map directory is required.";
+    return -1;
+  }
+  const auto map_filename = FLAGS_input_map_directory + "/base_map.txt";
   apollo::hdmap::Map pb_map;
   if (!apollo::cyber::common::GetProtoFromFile(map_filename, &pb_map)) {
     AERROR << "Failed to load txt map from " << map_filename;

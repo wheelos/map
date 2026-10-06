@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "absl/strings/str_split.h"
 #include "cyber/common/file.h"
+#include "modules/common/map/map_selection.h"
 
 namespace apollo {
 namespace hdmap {
@@ -28,44 +29,98 @@ using apollo::relative_map::MapMsg;
 namespace {
 
 // Find the first existing file from a list of candidates: "file_a|file_b|...".
-std::string FindFirstExist(const std::string& dir, const std::string& files) {
+bool GetSelectedMapDirectory(std::string* map_directory) {
+  apollo::common::SelectedMap selected_map;
+  if (!apollo::common::MapSelection::GetSelectedMap(&selected_map)) {
+    return false;
+  }
+  *map_directory = selected_map.directory;
+  return true;
+}
+
+std::string FindFirstExist(const std::string& map_directory,
+                           const std::string& files) {
   const std::vector<std::string> candidates = absl::StrSplit(files, '|');
   for (const auto& filename : candidates) {
-    const std::string file_path = absl::StrCat(FLAGS_map_dir, "/", filename);
+    if (filename.empty()) {
+      continue;
+    }
+    const std::string file_path =
+        absl::StrCat(map_directory, "/", filename);
     if (cyber::common::PathExists(file_path)) {
       return file_path;
     }
   }
-  AERROR << "No existing file found in " << dir << "/" << files
-         << ". Fallback to first candidate as default result.";
-  ACHECK(!candidates.empty()) << "Please specify at least one map.";
-  return absl::StrCat(FLAGS_map_dir, "/", candidates[0]);
+  AERROR << "No existing map file found in " << map_directory << " for "
+         << files;
+  return "";
 }
 
 }  // namespace
 
 std::string BaseMapFile() {
+  std::string map_directory;
+  if (!GetSelectedMapDirectory(&map_directory)) {
+    return "";
+  }
   if (FLAGS_use_navigation_mode) {
     AWARN << "base_map file is not used when FLAGS_use_navigation_mode is true";
   }
   return FLAGS_test_base_map_filename.empty()
-             ? FindFirstExist(FLAGS_map_dir, FLAGS_base_map_filename)
-             : FindFirstExist(FLAGS_map_dir, FLAGS_test_base_map_filename);
+             ? FindFirstExist(map_directory, FLAGS_base_map_filename)
+             : FindFirstExist(map_directory, FLAGS_test_base_map_filename);
 }
 
 std::string SimMapFile() {
+  std::string map_directory;
+  if (!GetSelectedMapDirectory(&map_directory)) {
+    return "";
+  }
   if (FLAGS_use_navigation_mode) {
     AWARN << "sim_map file is not used when FLAGS_use_navigation_mode is true";
   }
-  return FindFirstExist(FLAGS_map_dir, FLAGS_sim_map_filename);
+  return FindFirstExist(map_directory, FLAGS_sim_map_filename);
 }
 
 std::string RoutingMapFile() {
+  std::string map_directory;
+  if (!GetSelectedMapDirectory(&map_directory)) {
+    return "";
+  }
   if (FLAGS_use_navigation_mode) {
     AWARN << "routing_map file is not used when FLAGS_use_navigation_mode is "
              "true";
   }
-  return FindFirstExist(FLAGS_map_dir, FLAGS_routing_map_filename);
+  return FindFirstExist(map_directory, FLAGS_routing_map_filename);
+}
+
+std::string EndWayPointFile() {
+  if (FLAGS_use_navigation_mode) {
+    return FLAGS_navigation_mode_end_way_point_file;
+  }
+  std::string map_directory;
+  if (!GetSelectedMapDirectory(&map_directory)) {
+    return "";
+  }
+  return absl::StrCat(map_directory, "/", FLAGS_end_way_point_filename);
+}
+
+std::string DefaultRoutingFile() {
+  std::string map_directory;
+  if (!GetSelectedMapDirectory(&map_directory)) {
+    return "";
+  }
+  // TODO(map assets): Move auxiliary routing files into the selected bundle.
+  return absl::StrCat(map_directory, "_", FLAGS_default_routing_filename);
+}
+
+std::string ParkGoRoutingFile() {
+  std::string map_directory;
+  if (!GetSelectedMapDirectory(&map_directory)) {
+    return "";
+  }
+  // TODO(map assets): Move auxiliary routing files into the selected bundle.
+  return absl::StrCat(map_directory, "_", FLAGS_park_go_routing_filename);
 }
 
 std::unique_ptr<HDMap> CreateMap(const std::string& map_file_path) {

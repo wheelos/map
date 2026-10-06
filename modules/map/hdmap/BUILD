@@ -42,6 +42,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":hdmap",
+        "@wheelos_common//modules/common/map:map_selection",
         "@wheelos_common//modules/common/configs:config_gflags",
         "@com_google_absl//absl/strings",
         "@core//cyber/common:file",
@@ -91,6 +92,7 @@ cc_test(
     linkstatic = True,
     deps = [
         ":hdmap_util",
+        "@wheelos_common//modules/common/map:map_selection",
         "@com_github_google_glog//:glog",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",

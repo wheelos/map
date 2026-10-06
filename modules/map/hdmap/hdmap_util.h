@@ -18,7 +18,6 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "absl/strings/str_cat.h"
 #include "wheelos_msgs/map_msgs/map_id.pb.h"
 #include "wheelos_msgs/planning_msgs/navigation.pb.h"
 #include "modules/common/configs/config_gflags.h"
@@ -32,50 +31,40 @@ namespace apollo {
 namespace hdmap {
 
 /**
- * @brief get base map file path from flags.
+ * @brief get base map file path from the selected map bundle.
  * @return base map path
  */
 std::string BaseMapFile();
 
 /**
- * @brief get simulation map file path from flags.
+ * @brief get simulation map file path from the selected map bundle.
  * @return simulation map path
  */
 std::string SimMapFile();
 
 /**
- * @brief get routing map file path from flags.
+ * @brief get routing map file path from the selected map bundle.
  * @return routing map path
  */
 std::string RoutingMapFile();
 
 /**
- * @brief get end way point file path from flags.
+ * @brief get end way point file path from the selected map bundle.
  * @return end way point file path
  */
-inline std::string EndWayPointFile() {
-  if (FLAGS_use_navigation_mode) {
-    return absl::StrCat(FLAGS_navigation_mode_end_way_point_file);
-  } else {
-    return absl::StrCat(FLAGS_map_dir, "/", FLAGS_end_way_point_filename);
-  }
-}
+std::string EndWayPointFile();
 
 /**
- * @brief get default routing file path from flags.
+ * @brief get default routing file path associated with the selected map.
  * @return default routing points file path
  */
-inline std::string DefaultRoutingFile() {
-    return absl::StrCat(FLAGS_map_dir, "_", FLAGS_default_routing_filename);
-}
+std::string DefaultRoutingFile();
 
 /**
- * @brief get park and go routings file path from flags.
+ * @brief get park and go routing file path associated with the selected map.
  * @return park and routng routings file path
  */
-inline std::string ParkGoRoutingFile() {
-    return absl::StrCat(FLAGS_map_dir, "_", FLAGS_park_go_routing_filename);
-}
+std::string ParkGoRoutingFile();
 
 /**
  * @brief create a Map ID given a string.
@@ -92,21 +81,21 @@ std::unique_ptr<HDMap> CreateMap(const std::string& map_file_path);
 
 class HDMapUtil {
  public:
-  // Get default base map from the file specified by global flags.
+  // Get the selected base map bundle.
   // Return nullptr if failed to load.
   static const HDMap* BaseMapPtr();
   static const HDMap* BaseMapPtr(const relative_map::MapMsg& map_msg);
   // Guarantee to return a valid base_map, or else raise fatal error.
   static const HDMap& BaseMap();
 
-  // Get default sim_map from the file specified by global flags.
+  // Get the selected sim_map bundle.
   // Return nullptr if failed to load.
   static const HDMap* SimMapPtr();
 
   // Guarantee to return a valid sim_map, or else raise fatal error.
   static const HDMap& SimMap();
 
-  // Reload maps from the file specified by global flags.
+  // Reload maps from the persisted selected map.
   static bool ReloadMaps();
 
  private:
